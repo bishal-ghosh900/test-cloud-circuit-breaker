@@ -1,0 +1,124 @@
+services:
+  configserver:
+    container_name: test1-config
+    image: ghoshbishal/test1-config:latest
+    ports:
+      - 8070:8070
+    healthcheck:
+      test: curl http://configserver:8070/actuator/health/readiness | grep "UP" || exit 1
+      retries: 5
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+    environment:
+      SPRING_APPLICATION_NAME: test1-config
+    networks:
+      - host
+
+  eurekaserver:
+    container_name: eurekaserver
+    image: ghoshbishal/eureka-server:latest
+    ports:
+      - 8090:8090
+    healthcheck:
+      test: curl http://eurekaserver:8090/actuator/health/readiness | grep UP || exit 1
+      retries: 5
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+    environment:
+      SPRING_APPLICATION_NAME: eurekaserver
+    extends:
+      file: common-config.yml
+      service: service-common-config
+    depends_on:
+      configserver:
+        condition: service_healthy
+    networks:
+      - host
+
+  test1:
+    container_name: test1
+    image: ghoshbishal/test1:latest
+    ports:
+      - 8080:8080
+    healthcheck:
+      test: curl http://test1:8080/actuator/health/readiness | grep UP || exit 1
+      retries: 5
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+    extends:
+      file: common-config.yml
+      service: micro-service_common
+    environment:
+      SPRING_APPLICATION_NAME: test1
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+    networks:
+      - host
+
+  test2:
+    container_name: test2
+    image: ghoshbishal/test2:latest
+    ports:
+      - 8081:8081
+    healthcheck:
+      test: curl http://test2:8081/actuator/health/readiness | grep UP || exit 1
+      retries: 5
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+    environment:
+      SERVER_PORT: 8081
+      SPRING_APPLICATION_NAME: test2
+    extends:
+      file: common-config.yml
+      service: micro-service_common
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+    networks:
+      - host
+
+# extra instance to check load balancing
+#  test2_extra:
+#    container_name: test2_extra
+#    image: ghoshbishal/test2:latest
+#    ports:
+#      - 8082:8082
+#    environment:
+#      SERVER_PORT: 8082
+#      SPRING_APPLICATION_NAME: test2
+#    extends:
+#      file: common-config.yml
+#      service: micro-service_common
+#    depends_on:
+#      eurekaserver:
+#        condition: service_healthy
+#    networks:
+#      - host
+
+  gatewayserver:
+    container_name: gatewayserver
+    image: ghoshbishal/gatewayserver:latest
+    environment:
+      SPRING_APPLICATION_NAME: gatewayserver
+    ports:
+      - 8060:8060
+    extends:
+      file: common-config.yml
+      service: service-common-config
+    depends_on:
+      test1:
+        condition: service_healthy
+      test2:
+        condition: service_healthy
+    networks:
+      - host
+
+
+networks:
+  host:
+    driver: bridge

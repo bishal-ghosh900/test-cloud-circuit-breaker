@@ -1,0 +1,11 @@
+services:
+  service-common-config:
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8070
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8090/eureka/
+
+  micro-service_common:
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+    extends:
+      service: service-common-config
